@@ -70,6 +70,29 @@ macro_rules! segtree_tests {
                 t.update(0, 7);
                 assert_eq!(t.query(0, 0), 7);
             }
+
+            #[test]
+            fn large_range_query() {
+                let data: Vec<i64> = (1..=1000).collect();
+                let t = <$T>::build(&data);
+                // full range
+                assert_eq!(t.query(0, 999), 500500);
+                // partial ranges that span multiple internal nodes
+                assert_eq!(t.query(100, 899), (100..=899).map(|i| i + 1).sum::<i64>());
+                assert_eq!(t.query(0, 499), (1..=500).sum::<i64>());
+                assert_eq!(t.query(500, 999), (501..=1000).sum::<i64>());
+                // single element in large tree
+                assert_eq!(t.query(42, 42), 43);
+            }
+
+            #[test]
+            fn large_update_then_query() {
+                let data: Vec<i64> = (1..=1000).collect();
+                let mut t = <$T>::build(&data);
+                t.update(500, 0);
+                assert_eq!(t.query(0, 999), 500500 - 501);
+                assert_eq!(t.query(499, 501), 500 + 0 + 502);
+            }
         }
     };
 }
