@@ -1,0 +1,15 @@
+[package]
+name = "cache-friendly-segtree"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+oorandom = "11"
+
+[[bench]]
+name = "build"
+harness = false
+path = "bench/build.rs"
