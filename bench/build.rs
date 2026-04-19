@@ -4,6 +4,7 @@ use cache_friendly_segtree::{
     obvlivious::ObliviousSegTree,
 };
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::time::Duration;
 use oorandom::Rand64;
 
 const MAX_VAL: i64 = 1_000_000;
@@ -17,11 +18,12 @@ fn gen_data(n: usize, seed: u64) -> Vec<i64> {
         .collect()
 }
 
-const SIZES: &[usize] = &[16, 64, 256, 1024, 4096, 16384, 65536, 262144];
+const SIZES: &[usize] = &[4, 16, 64, 65536, 262144, 1048576];
 
 /// Benchmarks wall-clock build time for both segment tree implementations.
 fn bench_build(c: &mut Criterion) {
     let mut group = c.benchmark_group("build");
+    group.measurement_time(Duration::from_secs(8));
     for &n in SIZES {
         let data = gen_data(n, 42);
         group.throughput(Throughput::Elements(n as u64));
