@@ -13,3 +13,13 @@ oorandom = "11"
 name = "build"
 harness = false
 path = "bench/build.rs"
+
+[[bench]]
+name = "query_point"
+harness = false
+path = "bench/query_point.rs"
+
+[[bench]]
+name = "query_range"
+harness = false
+path = "bench/query_range.rs"
