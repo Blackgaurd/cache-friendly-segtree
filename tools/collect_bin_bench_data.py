@@ -8,7 +8,7 @@ from collections import defaultdict
 sys.path.append(os.path.join(os.path.dirname(__file__)))
 from parse_cachegrind import parse
 
-BINARIES = ["bin_build", "bin_query_point", "bin_query_range"]
+BINARIES = ["bin_build", "bin_query_point", "bin_query_range", "bin_update_point"]
 TREE_TYPES = ["F", "O"]
 ELEMENT_COUNTS = [8**1, 8**2, 8**3, 8**4, 8**5, 8**6]
 NUM_QUERIES = 1_000
@@ -18,6 +18,7 @@ BINARY_FN_FILTERS = {
     "bin_build": "build_rec",
     "bin_query_point": "query_rec",
     "bin_query_range": "query_rec",
+    "bin_update_point": "update_rec",
 }
 
 CEST_WEIGHTS = {
@@ -96,7 +97,7 @@ def main():
     compile_binaries()
 
     for binary in BINARIES:
-        num_queries = NUM_QUERIES if "query" in binary else None
+        num_queries = NUM_QUERIES if "query" in binary or "update" in binary else None
         for n in ELEMENT_COUNTS:
             for t in TREE_TYPES:
                 summary = run_bench(binary, n, t, num_queries)
