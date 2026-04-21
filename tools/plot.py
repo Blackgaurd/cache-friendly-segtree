@@ -29,7 +29,9 @@ BENCHES = [
 ]
 
 
-def load_estimates(criterion_dir: pathlib.Path, impl: str, size: int) -> tuple[float, float]:
+def load_estimates(
+    criterion_dir: pathlib.Path, impl: str, size: int
+) -> tuple[float, float]:
     """Return (mean_ns, std_dev_ns) for a given impl and array size."""
     path = criterion_dir / impl / str(size) / "new" / "estimates.json"
     with path.open() as f:
@@ -95,10 +97,22 @@ fig.canvas.manager.set_window_title("Segment Tree Benchmark Comparison")
 for row, bench in enumerate(BENCHES):
     small_means, small_stds = load_group(bench["dir"], SMALL_SIZES)
     large_means, large_stds = load_group(bench["dir"], LARGE_SIZES)
-    plot_group(axes[row, 0], SMALL_SIZES, small_means, small_stds,
-               f"{bench['title']} — small arrays", bench["ylabel"])
-    plot_group(axes[row, 1], LARGE_SIZES, large_means, large_stds,
-               f"{bench['title']} — large arrays", bench["ylabel"])
+    plot_group(
+        axes[row, 0],
+        SMALL_SIZES,
+        small_means,
+        small_stds,
+        f"{bench['title']} — small arrays",
+        bench["ylabel"],
+    )
+    plot_group(
+        axes[row, 1],
+        LARGE_SIZES,
+        large_means,
+        large_stds,
+        f"{bench['title']} — large arrays",
+        bench["ylabel"],
+    )
 
 fig.suptitle("Segment tree benchmarks: oblivious vs cache-friendly", y=1.01)
 plt.tight_layout()
