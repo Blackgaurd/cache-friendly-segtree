@@ -37,7 +37,6 @@ impl FriendlySegTree {
             // fill nodes
             let items_r = min(r, items.len() - 1);
             let items_slice = &items[l..=items_r];
-            // TODO: check if this is simd
             nodes[start_idx..start_idx + items_slice.len()].copy_from_slice(items_slice);
             return;
         }
@@ -57,25 +56,48 @@ impl FriendlySegTree {
     }
 
     fn query_rec(&self, start_idx: usize, l: usize, r: usize, ql: usize, qr: usize) -> i64 {
-        if ql > r || qr < l {
-            // no overlap
-            return 0;
-        }
-        if ql <= l && r <= qr {
-            // total overlap
-            let slice_l = max(l, ql);
-            let slice_r = min(r, qr);
-            return slice_sum(&self.nodes[slice_l..=slice_r]);
+        let length = r - l + 1;
+        if length == NODE_SZ {
+            // leaf: sum only the overlapping portion
+            let from = ql.saturating_sub(l);
+            let to = min(qr - l, NODE_SZ - 1);
+            return slice_sum(&self.nodes[start_idx + from..=start_idx + to]);
         }
 
-        // TODO: should be able to do below more efficiently, by looping only nodes that intersect with ql, qr
+        if ql <= l && r <= qr {
+            // total overlap at internal node
+            return slice_sum(&self.nodes[start_idx..start_idx + NODE_SZ]);
+        }
+
+        // partial overlap at internal node
         let mut sum = 0;
-        let chunk_size = (r - l + 1) / NODE_SZ;
-        for i in 0..NODE_SZ {
-            let next_start_idx = (start_idx + 1 + i) * NODE_SZ;
-            let next_l = l + i * chunk_size;
+        let chunk_size = length / NODE_SZ;
+        let mut first = (ql.saturating_sub(l)) / chunk_size;
+        let mut last = min((qr - l) / chunk_size, NODE_SZ - 1);
+
+        // left boundary — partial overlap, recurse
+        if ql > l + first * chunk_size {
+            let next_start_idx = (start_idx + 1 + first) * NODE_SZ;
+            let next_l = l + first * chunk_size;
             let next_r = next_l + chunk_size - 1;
             sum += self.query_rec(next_start_idx, next_l, next_r, ql, qr);
+            first += 1;
+        }
+        // right boundary — partial overlap, recurse
+        if last >= first && qr < l + (last + 1) * chunk_size - 1 {
+            let next_start_idx = (start_idx + 1 + last) * NODE_SZ;
+            let next_l = l + last * chunk_size;
+            let next_r = next_l + chunk_size - 1;
+            sum += self.query_rec(next_start_idx, next_l, next_r, ql, qr);
+            if last > 0 {
+                last -= 1;
+            } else {
+                return sum;
+            }
+        }
+        // middle children — all total overlap, branchless contiguous sum
+        if first <= last {
+            sum += slice_sum(&self.nodes[start_idx + first..=start_idx + last]);
         }
         sum
     }
