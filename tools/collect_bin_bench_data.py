@@ -50,7 +50,17 @@ def compute_cest(data: dict[str, int]) -> int:
     )
 
 
-def run_bench(
+def compile_binaries() -> None:
+    for binary in BINARIES:
+        print(f"Compiling {binary}...")
+        subprocess.run(
+            ["cargo", "build", "--release", "--bin", binary],
+            check=True,
+            capture_output=True,
+        )
+
+
+def run_num_elements_bench(
     binary: str, num_elements: int, tree_type: str, num_queries: int | None
 ) -> dict[str, int]:
     print(f"Running {binary} with {num_elements} elements, type {tree_type}...")
@@ -82,15 +92,6 @@ def run_bench(
     return summary
 
 
-def compile_binaries() -> None:
-    for binary in BINARIES:
-        print(f"Compiling {binary}...")
-        subprocess.run(
-            ["cargo", "build", "--release", "--bin", binary],
-            check=True,
-            capture_output=True,
-        )
-
 
 def main():
     results = defaultdict(lambda: defaultdict(dict))
@@ -102,7 +103,7 @@ def main():
         num_queries = NUM_QUERIES if "query" in binary or "update" in binary else None
         for n in ELEMENT_COUNTS:
             for t in TREE_TYPES:
-                summary = run_bench(binary, n, t, num_queries)
+                summary = run_num_elements_bench(binary, n, t, num_queries)
                 if event_names is None:
                     event_names = list(summary.keys())
                 results[binary][n][t] = summary
