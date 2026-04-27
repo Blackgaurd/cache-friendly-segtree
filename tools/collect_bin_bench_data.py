@@ -93,7 +93,7 @@ def run_num_elements_bench(
 
 
 
-def main():
+def plot_num_elements():
     results = defaultdict(lambda: defaultdict(dict))
     event_names = None
 
@@ -134,4 +134,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    plot_num_elements()
