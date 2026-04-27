@@ -103,6 +103,15 @@ In theory since eight items fit in a single cache line, node sizes that are a mu
 
 The gray vertical lines outline node sizes of 8, 16 and 32. And indeed we get a performance improvemat at each of those node sizes. Interestingly, this efficiency is less significant for a higher number of elements.
 
+## Instructions to reproduce results
+
+You will need cargo, python3.12+ and valgrind.
+
+```python
+pip install -r requirements.txt
+python tools/collect_bin_bench_data.py
+```
+
 ## AI disclosure
 
 Ideas are my own. Implementation was done in part with Claude Code. This README was written by myself.
