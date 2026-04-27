@@ -4,6 +4,7 @@ import os
 import sys
 import math
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import matplotlib.pyplot as plt
 
 # append to path so we can import from parse_cachegrind
@@ -59,7 +60,7 @@ def compile_binaries() -> None:
             capture_output=True,
         )
 
-def run_node_sz_bench(binary: str, node_sz: int, num_elements: int) -> dict[str, int]:
+def _cargo_build_node_sz(binary: str, node_sz: int) -> None:
     print(f"Compiling {binary} with NODE_SZ={node_sz}...")
     subprocess.run(
         ["cargo", "build", "--release", "--bin", binary],
@@ -68,14 +69,17 @@ def run_node_sz_bench(binary: str, node_sz: int, num_elements: int) -> dict[str,
         capture_output=True,
     )
 
+
+def _run_valgrind_node_sz(binary: str, node_sz: int, num_elements: int) -> dict[str, int]:
     print(f"Running {binary} with NODE_SZ={node_sz}, {num_elements} elements...")
+    out_file = f"cachegrind.out.{binary}.nodesz{node_sz}.{num_elements}"
     num_queries = NUM_QUERIES if "query" in binary or "update" in binary else None
     cmd = [
         "valgrind",
         "--tool=cachegrind",
         "--cache-sim=yes",
         "--branch-sim=yes",
-        "--cachegrind-out-file=cachegrind.out",
+        f"--cachegrind-out-file={out_file}",
         f"./target/release/{binary}",
         str(num_elements),
     ]
@@ -85,7 +89,8 @@ def run_node_sz_bench(binary: str, node_sz: int, num_elements: int) -> dict[str,
     subprocess.run(cmd, check=True, capture_output=True)
 
     filter_str = BINARY_FN_FILTERS[binary]
-    events, totals = parse("cachegrind.out", filter_str)
+    events, totals = parse(out_file, filter_str)
+    os.remove(out_file)
     return {event: sum(t[i] for t in totals.values()) for i, event in enumerate(events)}
 
 
@@ -93,14 +98,14 @@ def run_num_elements_bench(
     binary: str, num_elements: int, tree_type: str, num_queries: int | None
 ) -> dict[str, int]:
     print(f"Running {binary} with {num_elements} elements, type {tree_type}...")
+    out_file = f"cachegrind.out.{binary}.{num_elements}.{tree_type}"
 
-    # run command
     cmd = [
         "valgrind",
         "--tool=cachegrind",
         "--cache-sim=yes",
         "--branch-sim=yes",
-        "--cachegrind-out-file=cachegrind.out",
+        f"--cachegrind-out-file={out_file}",
         f"./target/release/{binary}",
         str(num_elements),
     ]
@@ -110,32 +115,36 @@ def run_num_elements_bench(
 
     subprocess.run(cmd, check=True, capture_output=True)
 
-    # parse only functions matching this binary's configured filter.
     filter_str = BINARY_FN_FILTERS[binary]
-    events, totals = parse("cachegrind.out", filter_str)
+    events, totals = parse(out_file, filter_str)
+    os.remove(out_file)
 
-    # calculate sum of all functions for each event
-    summary = {
+    return {
         event: sum(t[i] for t in totals.values()) for i, event in enumerate(events)
     }
-    return summary
 
 
 
-def plot_num_elements():
+def plot_num_elements(max_workers: int = 8):
     results = defaultdict(lambda: defaultdict(dict))
     event_names = None
 
     compile_binaries()
 
-    for binary in BINARIES:
-        num_queries = NUM_QUERIES if "query" in binary or "update" in binary else None
-        for n in ELEMENT_COUNTS:
-            for t in TREE_TYPES:
-                summary = run_num_elements_bench(binary, n, t, num_queries)
-                if event_names is None:
-                    event_names = list(summary.keys())
-                results[binary][n][t] = summary
+    tasks = [
+        (binary, n, t, NUM_QUERIES if "query" in binary or "update" in binary else None)
+        for binary in BINARIES
+        for n in ELEMENT_COUNTS
+        for t in TREE_TYPES
+    ]
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futs = {ex.submit(run_num_elements_bench, *task): task for task in tasks}
+        for fut in as_completed(futs):
+            binary, n, t, _ = futs[fut]
+            summary = fut.result()
+            if event_names is None:
+                event_names = list(summary.keys())
+            results[binary][n][t] = summary
 
     if event_names is None:
         print("\nNo results to display.")
@@ -165,14 +174,19 @@ def plot_num_elements():
 NODE_SZ_ELEMENT_COUNTS = [4**x for x in range(4, 10)]
 
 
-def plot_node_sz():
+def plot_node_sz(max_workers: int = 6):
     node_sizes = list(range(2, 33))
     results = defaultdict(lambda: defaultdict(dict))
 
     for binary in BINARIES:
         for node_sz in node_sizes:
-            for n in NODE_SZ_ELEMENT_COUNTS:
-                results[binary][node_sz][n] = run_node_sz_bench(binary, node_sz, n)
+            _cargo_build_node_sz(binary, node_sz)
+            with ThreadPoolExecutor(max_workers=max_workers) as ex:
+                futs = {ex.submit(_run_valgrind_node_sz, binary, node_sz, n): n
+                        for n in NODE_SZ_ELEMENT_COUNTS}
+                for fut in as_completed(futs):
+                    n = futs[fut]
+                    results[binary][node_sz][n] = fut.result()
 
     fig, axes = plt.subplots(1, len(BINARIES), figsize=(6 * len(BINARIES), 5))
     if len(BINARIES) == 1:
