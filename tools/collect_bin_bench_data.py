@@ -59,6 +59,35 @@ def compile_binaries() -> None:
             capture_output=True,
         )
 
+def run_node_sz_bench(binary: str, node_sz: int, num_elements: int) -> dict[str, int]:
+    print(f"Compiling {binary} with NODE_SZ={node_sz}...")
+    subprocess.run(
+        ["cargo", "build", "--release", "--bin", binary],
+        env={**os.environ, "SEGTREE_NODE_SZ": str(node_sz)},
+        check=True,
+        capture_output=True,
+    )
+
+    print(f"Running {binary} with NODE_SZ={node_sz}, {num_elements} elements...")
+    num_queries = NUM_QUERIES if "query" in binary or "update" in binary else None
+    cmd = [
+        "valgrind",
+        "--tool=cachegrind",
+        "--cache-sim=yes",
+        "--branch-sim=yes",
+        "--cachegrind-out-file=cachegrind.out",
+        f"./target/release/{binary}",
+        str(num_elements),
+    ]
+    if num_queries is not None:
+        cmd.append(str(num_queries))
+    cmd.append("F")
+    subprocess.run(cmd, check=True, capture_output=True)
+
+    filter_str = BINARY_FN_FILTERS[binary]
+    events, totals = parse("cachegrind.out", filter_str)
+    return {event: sum(t[i] for t in totals.values()) for i, event in enumerate(events)}
+
 
 def run_num_elements_bench(
     binary: str, num_elements: int, tree_type: str, num_queries: int | None
@@ -133,5 +162,37 @@ def plot_num_elements():
     print("Saved bench_results.png")
 
 
+NODE_SZ_ELEMENT_COUNTS = [4**x for x in range(4, 10)]
+
+
+def plot_node_sz():
+    node_sizes = list(range(2, 33))
+    results = defaultdict(lambda: defaultdict(dict))
+
+    for binary in BINARIES:
+        for node_sz in node_sizes:
+            for n in NODE_SZ_ELEMENT_COUNTS:
+                results[binary][node_sz][n] = run_node_sz_bench(binary, node_sz, n)
+
+    fig, axes = plt.subplots(1, len(BINARIES), figsize=(6 * len(BINARIES), 5))
+    if len(BINARIES) == 1:
+        axes = [axes]
+
+    for ax, binary in zip(axes, BINARIES):
+        for n in NODE_SZ_ELEMENT_COUNTS:
+            ys = [math.log2(compute_cest(results[binary][node_sz][n])) for node_sz in node_sizes]
+            ax.plot(node_sizes, ys, marker="o", label=str(n))
+        ax.set_xlabel("NODE_SZ")
+        ax.set_ylabel("log2(CEst)")
+        ax.set_ylim(bottom=0)
+        ax.set_title(binary)
+        ax.legend(title="num_elements")
+
+    plt.tight_layout()
+    plt.savefig("bench_results_node_sz.png", dpi=150)
+    print("Saved bench_results_node_sz.png")
+
+
 if __name__ == "__main__":
     plot_num_elements()
+    plot_node_sz()
