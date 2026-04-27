@@ -59,6 +59,7 @@ def compile_binaries() -> None:
         print(f"Compiling {binary}...")
         subprocess.run(
             ["cargo", "build", "--release", "--bin", binary],
+            env={**os.environ, "SEGTREE_NODE_SZ": "16"},  # node size 16 deemed optimal
             check=True,
             capture_output=True,
         )
