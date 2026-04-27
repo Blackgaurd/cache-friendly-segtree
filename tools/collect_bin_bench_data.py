@@ -27,11 +27,11 @@ CEST_WEIGHTS = {
     # instructions
     "Ir": 1,
     # branch misses
-    "Bm": 15,
+    "Bm": 17,
     # L1 data miss
-    "L1m": 5,
+    "L1m": 14,
     # all cache data miss
-    "LLm": 150,
+    "LLm": 294,
 }
 
 
