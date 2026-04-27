@@ -2,7 +2,9 @@
 import subprocess
 import os
 import sys
+import math
 from collections import defaultdict
+import matplotlib.pyplot as plt
 
 # append to path so we can import from parse_cachegrind
 sys.path.append(os.path.join(os.path.dirname(__file__)))
@@ -10,7 +12,7 @@ from parse_cachegrind import parse
 
 BINARIES = ["bin_build", "bin_query_point", "bin_query_range", "bin_update_point"]
 TREE_TYPES = ["F", "O"]
-ELEMENT_COUNTS = [8**1, 8**2, 8**3, 8**4, 8**5, 8**6]
+ELEMENT_COUNTS = [4**x for x in range(12 + 1)]
 NUM_QUERIES = 1_000
 
 # each binary should point at one specific function substring for parse(..., filter_str).
@@ -105,30 +107,29 @@ def main():
                     event_names = list(summary.keys())
                 results[binary][n][t] = summary
 
-    # simple summary presentation
     if event_names is None:
         print("\nNo results to display.")
         return
 
-    print("\nSummary of Results (all events + CEst):")
-    header = ["Binary", "N", "Type"] + event_names + ["CEst"]
-    widths = [20, 10, 5] + [15] * len(event_names) + [15]
-    header_line = " ".join(f"{col:<{widths[i]}}" for i, col in enumerate(header))
-    print(header_line)
-    print("-" * len(header_line))
+    fig, axes = plt.subplots(1, len(BINARIES), figsize=(6 * len(BINARIES), 5))
+    if len(BINARIES) == 1:
+        axes = [axes]
 
-    for binary in BINARIES:
-        for n in ELEMENT_COUNTS:
-            for t in TREE_TYPES:
-                data = results[binary][n][t]
-                cest = compute_cest(data)
-                row = (
-                    [binary, str(n), t]
-                    + [f"{data.get(ev, 0):,}" for ev in event_names]
-                    + [f"{cest:,}"]
-                )
-                row_line = " ".join(f"{val:<{widths[i]}}" for i, val in enumerate(row))
-                print(row_line)
+    for ax, binary in zip(axes, BINARIES):
+        for t in TREE_TYPES:
+            xs = ELEMENT_COUNTS
+            ys = [math.log2(compute_cest(results[binary][n][t])) for n in xs]
+            ax.plot(xs, ys, marker="o", label=t)
+        ax.set_xscale("log")
+        ax.set_xlabel("Number of Elements")
+        ax.set_ylabel("log2(CEst)")
+        ax.set_ylim(bottom=0)
+        ax.set_title(binary)
+        ax.legend()
+
+    plt.tight_layout()
+    plt.savefig("bench_results.png", dpi=150)
+    print("Saved bench_results.png")
 
 
 if __name__ == "__main__":
