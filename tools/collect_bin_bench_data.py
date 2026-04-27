@@ -158,8 +158,8 @@ def plot_num_elements():
         ax.legend()
 
     plt.tight_layout()
-    plt.savefig("bench_results.png", dpi=150)
-    print("Saved bench_results.png")
+    plt.savefig("bench_results_num_elements.png", dpi=150)
+    print("Saved bench_results_num_elements.png")
 
 
 NODE_SZ_ELEMENT_COUNTS = [4**x for x in range(4, 10)]
