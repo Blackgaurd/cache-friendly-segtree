@@ -182,9 +182,10 @@ def plot_node_sz():
         for n in NODE_SZ_ELEMENT_COUNTS:
             ys = [math.log2(compute_cest(results[binary][node_sz][n])) for node_sz in node_sizes]
             ax.plot(node_sizes, ys, marker="o", label=str(n))
+        for x in [8, 16, 32]:
+            ax.axvline(x=x, color="gray", linestyle="--", linewidth=0.8)
         ax.set_xlabel("NODE_SZ")
         ax.set_ylabel("log2(CEst)")
-        ax.set_ylim(bottom=0)
         ax.set_title(binary)
         ax.legend(title="num_elements")
 
