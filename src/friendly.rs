@@ -110,19 +110,14 @@ impl FriendlySegTree {
             return;
         }
 
-        let chunk_size = (r - l + 1) / NODE_SZ;
-        // TODO: optimize out this linear search
-        for i in 0..NODE_SZ {
-            let next_start_idx = (start_idx + 1 + i) * NODE_SZ;
-            let next_l = l + i * chunk_size;
-            let next_r = next_l + chunk_size - 1;
-            if next_l <= pos && pos <= next_r {
-                self.update_rec(next_start_idx, next_l, next_r, pos, val);
-                self.nodes[start_idx + i] =
-                    slice_sum(&self.nodes[next_start_idx..next_start_idx + NODE_SZ]);
-                break;
-            }
-        }
+        let chunk_size = length / NODE_SZ;
+        let i = (pos - l) / chunk_size;
+        let next_start_idx = (start_idx + 1 + i) * NODE_SZ;
+        let next_l = l + i * chunk_size;
+        let next_r = next_l + chunk_size - 1;
+        self.update_rec(next_start_idx, next_l, next_r, pos, val);
+        self.nodes[start_idx + i] =
+            slice_sum(&self.nodes[next_start_idx..next_start_idx + NODE_SZ]);
     }
 }
 
