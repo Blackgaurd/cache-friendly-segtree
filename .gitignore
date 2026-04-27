@@ -3,3 +3,4 @@
 cachegrind.out
 __pycache__/
 .venv/
+src/constants.rs

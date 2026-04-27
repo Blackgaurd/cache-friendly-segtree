@@ -4,8 +4,7 @@ use std::cmp::{max, min};
 
 use crate::interface::SegTree;
 
-const LINE_SZ: usize = 64; // cache line size
-const NODE_SZ: usize = LINE_SZ / size_of::<i64>();
+include!("constants.rs"); // NODE_SZ constant
 
 fn slice_sum(slice: &[i64]) -> i64 {
     // TODO: check the compiled code to see if this is simd
