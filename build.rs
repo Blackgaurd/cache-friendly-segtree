@@ -6,6 +6,10 @@ fn main() {
         .and_then(|v| v.parse().ok())
         .unwrap_or(8);
 
+    if node_sz <= 1 {
+        panic!("SEGTREE_NODE_SZ must be > 1, got {}", node_sz);
+    }
+
     let out = format!("pub const NODE_SZ: usize = {};\n", node_sz);
     fs::write(Path::new("src/constants.rs"), out).unwrap();
 
