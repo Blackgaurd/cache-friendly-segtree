@@ -165,7 +165,6 @@ def plot_num_elements(max_workers: int = 8):
         ax.set_xscale("log")
         ax.set_xlabel("Number of Elements")
         ax.set_ylabel("log2(CEst)")
-        ax.set_ylim(bottom=0)
         ax.set_title(binary)
         ax.legend()
 
