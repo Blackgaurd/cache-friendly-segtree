@@ -3,9 +3,12 @@ import subprocess
 import os
 import sys
 import math
+import csv
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import matplotlib.pyplot as plt
+
+RESULTS_DIR = "bench_results"
 
 # append to path so we can import from parse_cachegrind
 sys.path.append(os.path.join(os.path.dirname(__file__)))
@@ -166,9 +169,20 @@ def plot_num_elements(max_workers: int = 8):
         ax.set_title(binary)
         ax.legend()
 
+    os.makedirs(RESULTS_DIR, exist_ok=True)
     plt.tight_layout()
-    plt.savefig("bench_results_num_elements.png", dpi=150)
-    print("Saved bench_results_num_elements.png")
+    plt.savefig(f"{RESULTS_DIR}/bench_results_num_elements.png", dpi=150)
+    print(f"Saved {RESULTS_DIR}/bench_results_num_elements.png")
+
+    csv_path = f"{RESULTS_DIR}/bench_results_num_elements.csv"
+    with open(csv_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["binary", "num_elements", "tree_type", "CEst"])
+        for binary in BINARIES:
+            for n in ELEMENT_COUNTS:
+                for t in TREE_TYPES:
+                    writer.writerow([binary, n, t, compute_cest(results[binary][n][t])])
+    print(f"Saved {csv_path}")
 
 
 NODE_SZ_ELEMENT_COUNTS = [4**x for x in range(4, 10)]
@@ -203,9 +217,20 @@ def plot_node_sz(max_workers: int = 6):
         ax.set_title(binary)
         ax.legend(title="num_elements")
 
+    os.makedirs(RESULTS_DIR, exist_ok=True)
     plt.tight_layout()
-    plt.savefig("bench_results_node_sz.png", dpi=150)
-    print("Saved bench_results_node_sz.png")
+    plt.savefig(f"{RESULTS_DIR}/bench_results_node_sz.png", dpi=150)
+    print(f"Saved {RESULTS_DIR}/bench_results_node_sz.png")
+
+    csv_path = f"{RESULTS_DIR}/bench_results_node_sz.csv"
+    with open(csv_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["binary", "node_sz", "num_elements", "CEst"])
+        for binary in BINARIES:
+            for node_sz in node_sizes:
+                for n in NODE_SZ_ELEMENT_COUNTS:
+                    writer.writerow([binary, node_sz, n, compute_cest(results[binary][node_sz][n])])
+    print(f"Saved {csv_path}")
 
 
 if __name__ == "__main__":
